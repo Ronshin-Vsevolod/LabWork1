@@ -1,9 +1,41 @@
-start: EditorBMP.o
-	g++ EditorBMP.o -o start.app
+PROJECT = editorbmp
 
-LabaAi.o: EditorBMP.cpp
-	g++ -c Editor.cpp
+LIBPROJECT = $(PROJECT).a
+
+CXX = g++
+
+A = ar
+
+AFLAGS = rsv
+
+CCXFLAGS = -I. -std=c++17 -Werror -Wpedantic -Wall -g -fPIC
+
+LDXXFLAGS = $(CCXFLAGS) -L. -l:$(LIBPROJECT)
+
+DEPS=$(wildcard *.h)
+
+OBJ=EditorBMP.o
+
+.PHONY: default
+
+default: all;
+
+%.o: %.cpp $(DEPS)
+	$(CXX) -c -o $@ $< $(CCXFLAGS)
+
+$(LIBPROJECT): $(OBJ)
+	$(A) $(AFLAGS) $@ $^
+
+$(PROJECT): EditorBMP.o $(LIBPROJECT)
+	$(CXX) -o $@ EditorBMP.o $(LDXXFLAGS)
+
+all: $(PROJECT)
+
+.PHONY: clean
 
 clean:
-	rm *.o start.app
+	rm -f *.o
 
+cleanall: clean
+	rm -f $(PROJECT)
+	rm -f $(LIBPROJECT)
