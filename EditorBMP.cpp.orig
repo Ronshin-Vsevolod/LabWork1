@@ -162,19 +162,19 @@ void Bitmap::save(const std::string &filename)
     dib_info.width = pixels[0].size();
     dib_info.height = pixels.size();
 
-    dib_info.num_planes = 1;
-    dib_info.bits_per_pixel = 24;
-    dib_info.compression = 0;
-    dib_info.bmp_byte_size = 0;
-    dib_info.hres = 2835;
-    dib_info.vres = 2835;
-    dib_info.num_colors = 0;
-    dib_info.num_important_colors = 0;
+	dib_info.num_planes = 1;
+	dib_info.bits_per_pixel = 24;
+	dib_info.compression = 0;
+	dib_info.bmp_byte_size = 0;
+	dib_info.hres = 2835;
+	dib_info.vres = 2835;
+	dib_info.num_colors = 0;
+	dib_info.num_important_colors = 0;
 
-    file.write((char*)(&dib_info), sizeof(dib_info));
+	file.write((char*)(&dib_info), sizeof(dib_info));
 
-    for (int row = pixels.size() - 1; row >= 0; row--)
-    {
+	for (int row = pixels.size() - 1; row >= 0; row--)
+	{
         const std::vector<Pixel> &row_data = pixels[row];
 
         for (const Pixel &pix : row_data)
@@ -190,48 +190,48 @@ void Bitmap::save(const std::string &filename)
         }
     }
 
-    file.close();
+	file.close();
 }
 
 bool Bitmap::isImage()
 {
-    const size_t height = pixels.size();
+	const size_t height = pixels.size();
 
-    if (height == 0 || pixels[0].size() == 0)
-    {
-        return false;
-    }
+	if (height == 0 || pixels[0].size() == 0)
+	{
+		return false;
+	}
 
-    const size_t width = pixels[0].size();
+	const size_t width = pixels[0].size();
 
-    for (size_t row=0; row < height; row++)
-    {
-        if (pixels[row].size() != width)
-        {
-            return false;
-        }
-        for (size_t column=0; column < width; column++)
-        {
+	for (size_t row=0; row < height; row++)
+	{
+		if (pixels[row].size() != width)
+		{
+			return false;
+		}
+		for (size_t column=0; column < width; column++)
+		{
             Pixel current = pixels[row][column];
-            if (current.red > MAX_RGB || current.red < MIN_RGB ||
-                    current.green > MAX_RGB || current.green < MIN_RGB ||
-                    current.blue > MAX_RGB || current.blue < MIN_RGB)
-                return false;
-        }
-    }
-    return true;
+			if (current.red > MAX_RGB || current.red < MIN_RGB ||
+			   current.green > MAX_RGB || current.green < MIN_RGB ||
+			   current.blue > MAX_RGB || current.blue < MIN_RGB)
+				return false;
+		}
+	}
+	return true;
 }
 
 PixelMatrix Bitmap::toPixelMatrix()
 {
     if (isImage())
-    {
-        return pixels;
-    }
-    else
-    {
-        return PixelMatrix();
-    }
+	{
+		return pixels;
+	}
+	else
+	{
+		return PixelMatrix();
+	}
 }
 
 void Bitmap::fromPixelMatrix(const PixelMatrix &values)
@@ -276,30 +276,30 @@ void applyGaussianFilter(PixelMatrix &image)
 
     PixelMatrix result(image);
 
-    for (size_t i = 2; i < image.size() - 2; ++i)
-    {
-        for (size_t j = 2; j < image[i].size() - 2; ++j)
-        {
-            float redSum=0, greenSum=0, blueSum=0;
+   for (size_t i = 2; i < image.size() - 2; ++i)
+   {
+       for (size_t j = 2; j < image[i].size() - 2; ++j)
+       {
+           float redSum=0, greenSum=0, blueSum=0;
 
-            for (int ki=-2; ki <=2; ++ki)
-            {
-                for (int kj=-2; kj <=2; ++kj)
-                {
-                    const Pixel& p=image[i+ki][j+kj];
-                    redSum += p.red * kernel[ki+2][kj+2];
-                    greenSum += p.green * kernel[ki+2][kj+2];
-                    blueSum += p.blue * kernel[ki+2][kj+2];
-                }
-            }
+           for (int ki=-2; ki <=2; ++ki)
+           {
+               for (int kj=-2; kj <=2; ++kj)
+               {
+                   const Pixel& p=image[i+ki][j+kj];
+                   redSum += p.red * kernel[ki+2][kj+2];
+                   greenSum += p.green * kernel[ki+2][kj+2];
+                   blueSum += p.blue * kernel[ki+2][kj+2];
+               }
+           }
 
-            result[i][j].red=std::min(MAX_RGB,std::max(MIN_RGB,(int)(redSum)));
-            result[i][j].green=std::min(MAX_RGB,std::max(MIN_RGB,(int)(greenSum)));
-            result[i][j].blue=std::min(MAX_RGB,std::max(MIN_RGB,(int)(blueSum)));
-        }
-    }
+           result[i][j].red=std::min(MAX_RGB,std::max(MIN_RGB,(int)(redSum)));
+           result[i][j].green=std::min(MAX_RGB,std::max(MIN_RGB,(int)(greenSum)));
+           result[i][j].blue=std::min(MAX_RGB,std::max(MIN_RGB,(int)(blueSum)));
+       }
+   }
 
-    image=result;
+   image=result;
 }
 
 int main()
@@ -325,5 +325,9 @@ int main()
         rotatedBitmap.save("RotatedCounterClockwise.bmp");
     }
 
-    return 0;
+
+/*
+
+*/
+   return 0;
 }
