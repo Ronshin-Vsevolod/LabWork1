@@ -26,6 +26,8 @@ private:
 
 public:
 
+    void Rotate(bool clockwise, const PixelMatrix &original);
+
     void open(const std::string &namebmp);
 
     void save(const std::string &namebmp);
@@ -37,8 +39,6 @@ public:
     void fromPixelMatrix(const PixelMatrix &);
 };
 
-PixelMatrix rotateClockwise(const PixelMatrix &original);
-PixelMatrix rotateCounterClockwise(const PixelMatrix &original);
 void applyGaussianFilter(PixelMatrix &image);
 
 #endif

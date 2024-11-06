@@ -239,7 +239,7 @@ void Bitmap::fromPixelMatrix(const PixelMatrix &values)
 	pixels = values;
 }
 
-PixelMatrix rotateClockwise(const PixelMatrix &original)
+void Bitmap::Rotate(bool clockwise, const PixelMatrix &original)
 {
    int originalHeight = original.size();
    int originalWidth = original[0].size();
@@ -250,29 +250,17 @@ PixelMatrix rotateClockwise(const PixelMatrix &original)
    {
        for (int j = 0; j < originalWidth; ++j)
        {
-           rotated[j][originalHeight - 1 - i] = original[i][j];
+          if(clockwise)
+          {
+             rotated[j][originalHeight - 1 - i] = original[i][j];
+          }
+          else
+          {
+             rotated[originalWidth - 1 - j][i] = original[i][j];
+          }
        }
    }
-
-   return rotated;
-}
-
-PixelMatrix rotateCounterClockwise(const PixelMatrix &original)
-{
-   int originalHeight = original.size();
-   int originalWidth = original[0].size();
-
-   PixelMatrix rotated(originalWidth, std::vector<Pixel>(originalHeight));
-
-   for (int i = 0; i < originalHeight; ++i)
-   {
-       for (int j = 0; j < originalWidth; ++j)
-       {
-           rotated[originalWidth - 1 - j][i] = original[i][j];
-       }
-   }
-
-   return rotated;
+   pixels = rotated;
 }
 
 void applyGaussianFilter(PixelMatrix &image)
@@ -316,26 +304,28 @@ void applyGaussianFilter(PixelMatrix &image)
 
 int main()
 {
-   Bitmap bitmap;
+    Bitmap bitmap;
 
-   bitmap.open("input.bmp");
+    bitmap.open("input.bmp");
 
-   if (!bitmap.isImage())
-   {
-       std::cerr << "The image is not loaded correctly" << std::endl;
-       return -1;
-   }
+    {
+        Bitmap rotatedBitmap;
+        rotatedBitmap.Rotate(1, bitmap.toPixelMatrix());
+        rotatedBitmap.save("RotatedClockwise.bmp");
+    }
 
-   bitmap.fromPixelMatrix(rotateClockwise(bitmap.toPixelMatrix()));
-   bitmap.save("RotatedClockwise.bmp");
+    {
+        Bitmap rotatedBitmap;
+        rotatedBitmap.Rotate(0, bitmap.toPixelMatrix());
+        rotatedBitmap.save("RotatedCounterClockwise.bmp");
+    }
 
-   bitmap.fromPixelMatrix(rotateCounterClockwise(bitmap.toPixelMatrix()));
-   bitmap.save("RotatedCounterClockwise.bmp");
 
+/*
    PixelMatrix imgMatrix = bitmap.toPixelMatrix();
    applyGaussianFilter(imgMatrix);
    bitmap.fromPixelMatrix(imgMatrix);
    bitmap.save("Filtered.bmp");
-
+*/
    return 0;
 }
