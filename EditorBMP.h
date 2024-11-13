@@ -41,7 +41,7 @@ public:
 
 
 
-    //void Rotate(bool clockwise, const PixelMatrix &original);
+    void Rotate(bool clockwise);
 
     //void applyGaussianFilter(PixelMatrix &image);
 
@@ -51,9 +51,6 @@ public:
 
     bool isImage();
 
-    //PixelMatrix toPixelMatrix();
-
-    //void fromPixelMatrix(const PixelMatrix &);
 };
 
 #endif

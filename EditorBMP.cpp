@@ -16,23 +16,20 @@ int main()
     Bitmap bitmap;
 
     bitmap.open("input.bmp");
-/*
-    {
-        Bitmap rotatedBitmap;
-        rotatedBitmap.Rotate(1, bitmap.toPixelMatrix());
-        rotatedBitmap.save("RotatedClockwise.bmp");
 
-        PixelMatrix imgMatrix = rotatedBitmap.toPixelMatrix();
-        applyGaussianFilter(imgMatrix);
-        rotatedBitmap.fromPixelMatrix(imgMatrix);
-        rotatedBitmap.save("Filtered.bmp");
+    {
+        Bitmap tempBitmap = bitmap;
+        tempBitmap.Rotate(0);
+        tempBitmap.save("RotatedCounterClockwise.bmp");
     }
 
     {
-        Bitmap rotatedBitmap;
-        rotatedBitmap.Rotate(0, bitmap.toPixelMatrix());
-        rotatedBitmap.save("RotatedCounterClockwise.bmp");
+        bitmap.Rotate(1);
+        bitmap.save("RotatedClockwise.bmp");
+
+        //bitmap.applyGaussianFilter();
+        //bitmap.save("Filtered.bmp");
     }
-*/
+
     return 0;
 }
