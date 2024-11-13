@@ -34,3 +34,5 @@
 # Added
 *.bmp
 editorbmp
+.vscode
+input.bmp
