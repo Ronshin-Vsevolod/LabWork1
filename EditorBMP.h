@@ -39,17 +39,13 @@ private:
 
 public:
 
-
-
-    void Rotate(bool clockwise);
-
-    //void applyGaussianFilter(PixelMatrix &image);
-
     void open(const std::string &namebmp);
 
     void save(const std::string &namebmp);
 
-    bool isImage();
+    void Rotate(bool clockwise);
+
+    void applyGaussianFilter();
 
 };
 

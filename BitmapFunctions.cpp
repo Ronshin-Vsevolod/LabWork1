@@ -68,9 +68,9 @@ void Bitmap::open(const std::string &filename)
 
     std::cout << "File memory size: " << totalMemoryNeeded << " bite" << std::endl;
 
-    file.seekg(bmp_offset, std::ios::beg);
-
     pixel_data.resize(height * width * 3);
+
+    file.seekg(bmp_offset, std::ios::beg);
 
     for (int row = height - 1; row >= 0; --row)
     {
@@ -81,13 +81,17 @@ void Bitmap::open(const std::string &filename)
             uint8_t red = file.get();
 
             int index = (row * width + col) * 3;
-            pixel_data[index] = red;
+            pixel_data[index] = blue;
             pixel_data[index + 1] = green;
-            pixel_data[index + 2] = blue;
+            pixel_data[index + 2] = red;
         }
 
         int padding = (4 - (width * 3) % 4) % 4;
-        file.ignore(padding);
+
+        if (padding > 0)
+        {
+            file.ignore(padding);
+        }
     }
 
     file.close();
@@ -111,9 +115,9 @@ void Bitmap::save(const std::string &filename)
         return;
     }
 
-    bmp_offset = sizeof(magic) + sizeof(file_size) + sizeof(creator1) + sizeof(creator2) +
+    /*bmp_offset = sizeof(magic) + sizeof(file_size) + sizeof(creator1) + sizeof(creator2) +
                  sizeof(header_size) + sizeof(width) + sizeof(height) +
-                 sizeof(num_planes) + sizeof(bits_per_pixel);
+                 sizeof(num_planes) + sizeof(bits_per_pixel);*/
 
     file.write((char*)(&magic), sizeof(magic));
 
@@ -134,6 +138,8 @@ void Bitmap::save(const std::string &filename)
     file.write(reinterpret_cast<char*>(&num_colors), sizeof(num_colors));
     file.write(reinterpret_cast<char*>(&num_important_colors), sizeof(num_important_colors));
 
+    file.seekp(bmp_offset, std::ios::beg);
+
     for (int row = height - 1; row >= 0; --row)
     {
         for (int col = 0; col < width; col++)
@@ -143,18 +149,23 @@ void Bitmap::save(const std::string &filename)
             uint8_t green = pixel_data[index + 1];
             uint8_t red = pixel_data[index + 2];
 
-            file.put(red);
-            file.put(green);
             file.put(blue);
+            file.put(green);
+            file.put(red);
         }
-        size_t padding = (4 - (width * 3) % 4) % 4;
+
+        size_t padding = ((width * 3) % 4) % 4;
+
         for (size_t i = 0; i < padding; i++)
         {
             file.put(0);
         }
     }
+
     file.close();
 }
+
+
 
 void Bitmap::Rotate(bool clockwise)
 {
@@ -191,5 +202,50 @@ void Bitmap::Rotate(bool clockwise)
 
     width = new_width;
     height = new_height;
+    pixel_data.swap(new_pixel_data);
+}
+
+
+
+void Bitmap::applyGaussianFilter()
+{
+    const float kernel[5][5] =
+    {
+        {1/273.0f, 4/273.0f, 6/273.0f, 4/273.0f, 1/273.0f},
+        {4/273.0f, 16/273.0f, 24/273.0f, 16/273.0f, 4/273.0f},
+        {6/273.0f, 24/273.0f, 36/273.0f, 24/273.0f, 6/273.0f},
+        {4/273.0f, 16/273.0f, 24/273.0f, 16/273.0f, 4/273.0f},
+        {1/273.0f, 4/273.0f, 6/273.0f, 4/273.0f, 1/273.0f}
+    };
+
+    std::vector<uint8_t> new_pixel_data(pixel_data.size());
+
+    int width = this->width;
+    int height = this->height;
+
+    for (int y = 2; y < height - 2; ++y)
+    {
+        for (int x = 2; x < width - 2; ++x)
+        {
+            float redSum = 0, greenSum = 0, blueSum = 0;
+
+            for (int ki = -2; ki <= 2; ++ki)
+            {
+                for (int kj = -2; kj <= 2; ++kj)
+                {
+                    int pixelIndex = ((y + ki) * width + (x + kj)) * 3;
+                    redSum += pixel_data[pixelIndex] * kernel[ki + 2][kj + 2];
+                    greenSum += pixel_data[pixelIndex + 1] * kernel[ki + 2][kj + 2];
+                    blueSum += pixel_data[pixelIndex + 2] * kernel[ki + 2][kj + 2];
+                }
+            }
+
+            int newIndex = (y * width + x) * 3;
+            new_pixel_data[newIndex] = std::min(255, std::max(0, static_cast<int>(redSum)));
+            new_pixel_data[newIndex + 1] = std::min(255, std::max(0, static_cast<int>(greenSum)));
+            new_pixel_data[newIndex + 2] = std::min(255, std::max(0, static_cast<int>(blueSum)));
+        }
+    }
+
     pixel_data.swap(new_pixel_data);
 }
