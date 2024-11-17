@@ -14,7 +14,7 @@ LDXXFLAGS = $(CCXFLAGS) -L. -l:$(LIBPROJECT)
 
 DEPS=$(wildcard *.h)
 
-OBJ=EditorBMP.o BitmapFunctions.o
+OBJ= Main.o EditorBMP.o
 
 .PHONY: default
 
@@ -26,8 +26,8 @@ default: all;
 $(LIBPROJECT): $(OBJ)
 	$(A) $(AFLAGS) $@ $^
 
-$(PROJECT): EditorBMP.o $(LIBPROJECT)
-	$(CXX) -o $@ EditorBMP.o $(LDXXFLAGS)
+$(PROJECT): Main.o $(LIBPROJECT)
+	$(CXX) -o $@ Main.o $(LDXXFLAGS)
 
 all: $(PROJECT)
 
