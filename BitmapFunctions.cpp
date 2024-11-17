@@ -5,12 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstdint>
-
-using uint8_t = unsigned char;
-using uint32_t = unsigned int;
-using uint16_t = unsigned short int ;
-using int32_t = signed int;
-using int16_t = signed short int;
+#include <cmath>
 
 void Bitmap::open(const std::string &filename)
 {
@@ -22,7 +17,6 @@ void Bitmap::open(const std::string &filename)
         return;
     }
 
-    //bmpfile magic;  
     file.read((char*)(magic), sizeof(magic));
 
     if (magic[0] != 'B' || magic[1] != 'M')
@@ -30,69 +24,48 @@ void Bitmap::open(const std::string &filename)
         std::cerr << filename << "wrong bmp format" << std::endl;
         return;
     }
+    
+    file.read(reinterpret_cast<char*>(&fileHeader), sizeof(BMPFileHeader));
+    file.read(reinterpret_cast<char*>(&dibInfo), sizeof(BMPFileDIBInfo));
 
-    //bmpfile header;
-    file.read(reinterpret_cast<char*>(&file_size), sizeof(file_size));
-    file.read(reinterpret_cast<char*>(&creator1), sizeof(creator1));
-    file.read(reinterpret_cast<char*>(&creator2), sizeof(creator2));
-    file.read(reinterpret_cast<char*>(&bmp_offset), sizeof(bmp_offset));
-
-    //bmpfile dib_info;
-    file.read(reinterpret_cast<char*>(&header_size), sizeof(header_size));
-    file.read(reinterpret_cast<char*>(&width), sizeof(width));
-    file.read(reinterpret_cast<char*>(&height), sizeof(height));
-    file.read(reinterpret_cast<char*>(&num_planes), sizeof(num_planes));
-    file.read(reinterpret_cast<char*>(&bits_per_pixel), sizeof(bits_per_pixel));
-    file.read(reinterpret_cast<char*>(&compression), sizeof(compression));
-    file.read(reinterpret_cast<char*>(&bmp_byte_size), sizeof(bmp_byte_size));
-    file.read(reinterpret_cast<char*>(&hres), sizeof(hres));
-    file.read(reinterpret_cast<char*>(&vres), sizeof(vres));
-    file.read(reinterpret_cast<char*>(&num_colors), sizeof(num_colors));
-    file.read(reinterpret_cast<char*>(&num_important_colors), sizeof(num_important_colors));
-
-    if (bits_per_pixel != 24)
+    if (dibInfo.bits_per_pixel != 24)
     {
-        std::cerr << filename << " uses " << bits_per_pixel
+        std::cerr << filename << " uses " << dibInfo.bits_per_pixel
                   << "bits per pixel (only 24 bit is supported so far)" << std::endl;
         return;
     }
 
-    if (compression != 0)
+    if (dibInfo.compression != 0)
     {
         std::cerr << filename << " is compressed."
                   << "EditorBMP only supports uncompressed images" << std::endl;
         return;
     }
 
-    int totalMemoryNeeded = width * height * 3;
+    int totalMemoryNeeded = dibInfo.width * dibInfo.height * 3;
 
     std::cout << "File memory size: " << totalMemoryNeeded << " bite" << std::endl;
 
-    pixel_data.resize(height * width * 3);
+    pixel_data.resize(dibInfo.height * dibInfo.width * 3);
 
-    file.seekg(bmp_offset, std::ios::beg);
+    file.seekg(fileHeader.bmp_offset, std::ios::beg);
 
-    for (int row = height - 1; row >= 0; --row)
+    for (int row = dibInfo.height - 1; row >= 0; --row)
     {
-        for (int col = 0; col < width; ++col)
-        {
-            uint8_t blue = file.get();
-            uint8_t green = file.get();
-            uint8_t red = file.get();
+        std::vector<uint8_t> bytesRow(dibInfo.width*3);
+        file.read(reinterpret_cast<char*>(bytesRow.data()), dibInfo.width*3);
+            
+        std::copy(bytesRow.begin(), bytesRow.end(), pixel_data.begin() + (row * dibInfo.width * 3));
 
-            int index = (row * width + col) * 3;
-            pixel_data[index] = blue;
-            pixel_data[index + 1] = green;
-            pixel_data[index + 2] = red;
-        }
-
-        int padding = (4 - (width * 3) % 4) % 4;
+        int padding = (4 - (dibInfo.width * 3) % 4) % 4;
 
         if (padding > 0)
         {
             file.ignore(padding);
         }
     }
+
+        
 
     file.close();
 }
@@ -109,48 +82,27 @@ void Bitmap::save(const std::string &filename)
         return;
     }
 
-    if (!(width > 0 && height > 0))
+    if (!(dibInfo.width > 0 && dibInfo.height > 0))
     {
         std::cerr << "Bitmap cannot be saved. It is not a valid image." << std::endl;
         return;
     }
 
     file.write((char*)(&magic), sizeof(magic));
+    file.write(reinterpret_cast<char*>(&fileHeader), sizeof(BMPFileHeader));
+    file.write(reinterpret_cast<char*>(&dibInfo), sizeof(BMPFileDIBInfo));
 
-    file.write(reinterpret_cast<char*>(&file_size), sizeof(file_size));
-    file.write(reinterpret_cast<char*>(&creator1), sizeof(creator1));
-    file.write(reinterpret_cast<char*>(&creator2), sizeof(creator2));
-    file.write(reinterpret_cast<char*>(&bmp_offset), sizeof(bmp_offset));
+    file.seekp(fileHeader.bmp_offset, std::ios::beg);
 
-    file.write(reinterpret_cast<char*>(&header_size), sizeof(header_size));
-    file.write(reinterpret_cast<char*>(&width), sizeof(width));
-    file.write(reinterpret_cast<char*>(&height), sizeof(height));
-    file.write(reinterpret_cast<char*>(&num_planes), sizeof(num_planes));
-    file.write(reinterpret_cast<char*>(&bits_per_pixel), sizeof(bits_per_pixel));
-    file.write(reinterpret_cast<char*>(&compression), sizeof(compression));
-    file.write(reinterpret_cast<char*>(&bmp_byte_size), sizeof(bmp_byte_size));
-    file.write(reinterpret_cast<char*>(&hres), sizeof(hres));
-    file.write(reinterpret_cast<char*>(&vres), sizeof(vres));
-    file.write(reinterpret_cast<char*>(&num_colors), sizeof(num_colors));
-    file.write(reinterpret_cast<char*>(&num_important_colors), sizeof(num_important_colors));
-
-    file.seekp(bmp_offset, std::ios::beg);
-
-    for (int row = height - 1; row >= 0; --row)
+    for (int row = dibInfo.height - 1; row >= 0; --row)
     {
-        for (int col = 0; col < width; col++)
-        {
-            int index = (row * width + col) * 3;
-            uint8_t blue = pixel_data[index];
-            uint8_t green = pixel_data[index + 1];
-            uint8_t red = pixel_data[index + 2];
+        std::vector<uint8_t> bytesRow(dibInfo.width*3);
 
-            file.put(blue);
-            file.put(green);
-            file.put(red);
-        }
+        std::copy(pixel_data.begin() + (row * dibInfo.width * 3), pixel_data.begin() + ((row+1) * dibInfo.width * 3), bytesRow.begin());
+        
+        file.write(reinterpret_cast<char*>(bytesRow.data()), dibInfo.width*3);
 
-        size_t padding = ((width * 3) % 4) % 4;
+        size_t padding = ((dibInfo.width * 3) % 4) % 4;
 
         for (size_t i = 0; i < padding; i++)
         {
@@ -165,16 +117,16 @@ void Bitmap::save(const std::string &filename)
 
 void Bitmap::Rotate(bool clockwise)
 {
-    int new_width = height;
-    int new_height = width;
+    int new_width = dibInfo.height;
+    int new_height = dibInfo.width;
 
     std::vector<uint8_t> new_pixel_data(new_width * new_height * 3);
 
-    for (int y = 0; y < height; ++y)
+    for (int y = 0; y < dibInfo.height; ++y)
     {
-        for (int x = 0; x < width; ++x)
+        for (int x = 0; x < dibInfo.width; ++x)
         {
-            int old_index = (y * width + x) * 3;
+            int old_index = (y * dibInfo.width + x) * 3;
 
             int new_x, new_y;
             if (clockwise)
@@ -196,52 +148,70 @@ void Bitmap::Rotate(bool clockwise)
         }
     }
 
-    width = new_width;
-    height = new_height;
+    dibInfo.width = new_width;
+    dibInfo.height = new_height;
     pixel_data.swap(new_pixel_data);
 }
 
 
 
-void Bitmap::applyGaussianFilter()
+void Bitmap::applyGaussianFilter(int kernelSize)
 {
-    const float kernel[5][5] =
-    {
-        {1/273.0f, 4/273.0f, 6/273.0f, 4/273.0f, 1/273.0f},
-        {4/273.0f, 16/273.0f, 24/273.0f, 16/273.0f, 4/273.0f},
-        {6/273.0f, 24/273.0f, 36/273.0f, 24/273.0f, 6/273.0f},
-        {4/273.0f, 16/273.0f, 24/273.0f, 16/273.0f, 4/273.0f},
-        {1/273.0f, 4/273.0f, 6/273.0f, 4/273.0f, 1/273.0f}
-    };
-
-    std::vector<uint8_t> new_pixel_data(pixel_data.size());
-
-    int width = this->width;
-    int height = this->height;
-
-    for (int y = 2; y < height - 2; ++y)
-    {
-        for (int x = 2; x < width - 2; ++x)
+    if (kernelSize % 2 == 0 || kernelSize < 3 || kernelSize > 11)
         {
-            float redSum = 0, greenSum = 0, blueSum = 0;
-
-            for (int ki = -2; ki <= 2; ++ki)
-            {
-                for (int kj = -2; kj <= 2; ++kj)
-                {
-                    int pixelIndex = ((y + ki) * width + (x + kj)) * 3;
-                    redSum += pixel_data[pixelIndex] * kernel[ki + 2][kj + 2];
-                    greenSum += pixel_data[pixelIndex + 1] * kernel[ki + 2][kj + 2];
-                    blueSum += pixel_data[pixelIndex + 2] * kernel[ki + 2][kj + 2];
-                }
-            }
-
-            int newIndex = (y * width + x) * 3;
-            new_pixel_data[newIndex] = std::min(255, std::max(0, static_cast<int>(redSum)));
-            new_pixel_data[newIndex + 1] = std::min(255, std::max(0, static_cast<int>(greenSum)));
-            new_pixel_data[newIndex + 2] = std::min(255, std::max(0, static_cast<int>(blueSum)));
+            std::cerr << "Kernel size must be an odd number between 3 and 11." << std::endl;
+            return;
         }
-    }
+
+        std::vector<std::vector<float>> kernel(kernelSize, std::vector<float>(kernelSize));
+        float sigma = 1.0f;
+        float sum = 0.0f;
+
+    for (int x = 0; x < kernelSize; ++x)
+        {
+            for (int y = 0; y < kernelSize; ++y)
+            {
+                int offsetX = x - kernelSize / 2;
+                int offsetY = y - kernelSize / 2;
+                float value = (1 / (2 * M_PI * sigma * sigma)) * std::exp(-(offsetX * offsetX + offsetY * offsetY) / (2 * sigma * sigma));
+                kernel[x][y] = value;
+                sum += value;
+            }
+        }
+
+    for (int i = 0; i < kernelSize; ++i)
+        {
+            for (int j = 0; j < kernelSize; ++j)
+            {
+                kernel[i][j] /= sum;
+            }
+        }
+
+        std::vector<uint8_t> new_pixel_data(pixel_data.size());
+
+        for (int y = kernelSize / 2; y < dibInfo.height - kernelSize / 2; ++y)
+        {
+            for (int x = kernelSize / 2; x < dibInfo.width - kernelSize / 2; ++x)
+            {
+                float redSum = 0, greenSum = 0, blueSum = 0;
+
+                for (int ki = 0; ki < kernelSize; ++ki)
+                {
+                    for (int kj = 0; kj < kernelSize; ++kj)
+                    {
+                        int pixelIndex = ((y + ki - kernelSize / 2) * dibInfo.width + (x + kj - kernelSize / 2)) * 3;
+                        redSum += pixel_data[pixelIndex] * kernel[ki][kj];
+                        greenSum += pixel_data[pixelIndex + 1] * kernel[ki][kj];
+                        blueSum += pixel_data[pixelIndex + 2] * kernel[ki][kj];
+                    }
+                }
+
+                int newIndex = (y * dibInfo.width + x) * 3;
+                new_pixel_data[newIndex] = std::min(255, std::max(0, static_cast<int>(redSum)));
+                new_pixel_data[newIndex + 1] = std::min(255, std::max(0, static_cast<int>(greenSum)));
+                new_pixel_data[newIndex + 2] = std::min(255, std::max(0, static_cast<int>(blueSum)));
+            }
+        }
 
     pixel_data.swap(new_pixel_data);
 }
