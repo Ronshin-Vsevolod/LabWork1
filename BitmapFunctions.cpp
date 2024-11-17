@@ -115,10 +115,6 @@ void Bitmap::save(const std::string &filename)
         return;
     }
 
-    /*bmp_offset = sizeof(magic) + sizeof(file_size) + sizeof(creator1) + sizeof(creator2) +
-                 sizeof(header_size) + sizeof(width) + sizeof(height) +
-                 sizeof(num_planes) + sizeof(bits_per_pixel);*/
-
     file.write((char*)(&magic), sizeof(magic));
 
     file.write(reinterpret_cast<char*>(&file_size), sizeof(file_size));

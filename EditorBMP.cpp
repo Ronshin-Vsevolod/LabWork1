@@ -1,14 +1,4 @@
 #include "EditorBMP.h"
-/*
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <algorithm>
-#include <cstdint>
-*/
-
-const int MIN_RGB = 0;
-const int MAX_RGB = 255;
 
 int main()
 {
