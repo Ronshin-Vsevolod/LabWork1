@@ -126,14 +126,15 @@ int main(int argc, char* argv[])
 {
     std::cout << "===== Image Processing Performance Testing =====" << std::endl;
     
-    std::string input_file = "input.bmp";
-    bool use_large_image = false;
+    std::string input_file = "test_image.bmp";
     
     if (argc > 1 && std::string(argv[1]) == "large")
     {
-        input_file = "test_large.bmp";
         createLargeTestImage(input_file, 2048, 2048);
-        use_large_image = true;
+    }
+    else
+    {
+        createLargeTestImage(input_file, 800, 600);
     }
     
     int max_threads = omp_get_max_threads();
@@ -158,12 +159,6 @@ int main(int argc, char* argv[])
         double speedup = base_time / time;
         
         std::cout << threads << "\t" << time << "\t" << speedup << "x" << std::endl;
-    }
-    
-    if (!use_large_image)
-    {
-        std::cout << "\nFor more pronounced speedup demonstration, run:" << std::endl;
-        std::cout << "./editorbmp_test large" << std::endl;
     }
     
     return 0;
