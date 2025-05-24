@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include <omp.h>
 
 void Bitmap::open(const std::string &filename)
 {
@@ -65,8 +66,6 @@ void Bitmap::open(const std::string &filename)
         }
     }
 
-        
-
     file.close();
 }
 
@@ -98,7 +97,9 @@ void Bitmap::save(const std::string &filename)
     {
         std::vector<uint8_t> bytesRow(dibInfo.width*3);
 
-        std::copy(pixel_data.begin() + (row * dibInfo.width * 3), pixel_data.begin() + ((row+1) * dibInfo.width * 3), bytesRow.begin());
+        std::copy(pixel_data.begin() + (row * dibInfo.width * 3), 
+                 pixel_data.begin() + ((row+1) * dibInfo.width * 3), 
+                 bytesRow.begin());
         
         file.write(reinterpret_cast<char*>(bytesRow.data()), dibInfo.width*3);
 
@@ -122,29 +123,63 @@ void Bitmap::Rotate(bool clockwise)
 
     std::vector<uint8_t> new_pixel_data(new_width * new_height * 3);
 
-    for (int y = 0; y < dibInfo.height; ++y)
+    // Parallelization only if the image is large enough
+    if (dibInfo.width * dibInfo.height > 1000 * 1000)
     {
-        for (int x = 0; x < dibInfo.width; ++x)
+        #pragma omp parallel for
+        for (int y = 0; y < dibInfo.height; ++y)
         {
-            int old_index = (y * dibInfo.width + x) * 3;
-
-            int new_x, new_y;
-            if (clockwise)
+            for (int x = 0; x < dibInfo.width; ++x)
             {
-                new_x = new_width - 1 - y;
-                new_y = x;
+                int old_index = (y * dibInfo.width + x) * 3;
+
+                int new_x, new_y;
+                if (clockwise)
+                {
+                    new_x = new_width - 1 - y;
+                    new_y = x;
+                }
+                else
+                {
+                    new_x = y;
+                    new_y = new_height - 1 - x;                
+                }
+
+                int new_index = (new_y * new_width + new_x) * 3;
+
+                new_pixel_data[new_index] = pixel_data[old_index];
+                new_pixel_data[new_index + 1] = pixel_data[old_index + 1];
+                new_pixel_data[new_index + 2] = pixel_data[old_index + 2];
             }
-            else
+        }
+    }
+    else
+    {
+        // Sequential version for small images
+        for (int y = 0; y < dibInfo.height; ++y)
+        {
+            for (int x = 0; x < dibInfo.width; ++x)
             {
-                new_x = y;
-                new_y = new_height - 1 - x;                
+                int old_index = (y * dibInfo.width + x) * 3;
+
+                int new_x, new_y;
+                if (clockwise)
+                {
+                    new_x = new_width - 1 - y;
+                    new_y = x;
+                }
+                else
+                {
+                    new_x = y;
+                    new_y = new_height - 1 - x;                
+                }
+
+                int new_index = (new_y * new_width + new_x) * 3;
+
+                new_pixel_data[new_index] = pixel_data[old_index];
+                new_pixel_data[new_index + 1] = pixel_data[old_index + 1];
+                new_pixel_data[new_index + 2] = pixel_data[old_index + 2];
             }
-
-            int new_index = (new_y * new_width + new_x) * 3;
-
-            new_pixel_data[new_index] = pixel_data[old_index];
-            new_pixel_data[new_index + 1] = pixel_data[old_index + 1];
-            new_pixel_data[new_index + 2] = pixel_data[old_index + 2];
         }
     }
 
@@ -158,37 +193,41 @@ void Bitmap::Rotate(bool clockwise)
 void Bitmap::applyGaussianFilter(int kernelSize)
 {
     if (kernelSize % 2 == 0 || kernelSize < 3 || kernelSize > 11)
-        {
-            std::cerr << "Kernel size must be an odd number between 3 and 11." << std::endl;
-            return;
-        }
+    {
+        std::cerr << "Kernel size must be an odd number between 3 and 11." << std::endl;
+        return;
+    }
 
-        std::vector<std::vector<float>> kernel(kernelSize, std::vector<float>(kernelSize));
-        float sigma = 1.0f;
-        float sum = 0.0f;
+    std::vector<std::vector<float>> kernel(kernelSize, std::vector<float>(kernelSize));
+    float sigma = 1.0f;
+    float sum = 0.0f;
 
     for (int x = 0; x < kernelSize; ++x)
+    {
+        for (int y = 0; y < kernelSize; ++y)
         {
-            for (int y = 0; y < kernelSize; ++y)
-            {
-                int offsetX = x - kernelSize / 2;
-                int offsetY = y - kernelSize / 2;
-                float value = (1 / (2 * M_PI * sigma * sigma)) * std::exp(-(offsetX * offsetX + offsetY * offsetY) / (2 * sigma * sigma));
-                kernel[x][y] = value;
-                sum += value;
-            }
+            int offsetX = x - kernelSize / 2;
+            int offsetY = y - kernelSize / 2;
+            float value = (1 / (2 * M_PI * sigma * sigma)) * std::exp(-(offsetX * offsetX + offsetY * offsetY) / (2 * sigma * sigma));
+            kernel[x][y] = value;
+            sum += value;
         }
+    }
 
     for (int i = 0; i < kernelSize; ++i)
+    {
+        for (int j = 0; j < kernelSize; ++j)
         {
-            for (int j = 0; j < kernelSize; ++j)
-            {
-                kernel[i][j] /= sum;
-            }
+            kernel[i][j] /= sum;
         }
+    }
 
-        std::vector<uint8_t> new_pixel_data(pixel_data.size());
+    std::vector<uint8_t> new_pixel_data(pixel_data.size());
 
+    // Parallelization only if the image is large enough and the kernel is large enough
+    if (dibInfo.width * dibInfo.height > 500 * 500 || kernelSize >= 5)
+    {
+        #pragma omp parallel for schedule(dynamic)
         for (int y = kernelSize / 2; y < dibInfo.height - kernelSize / 2; ++y)
         {
             for (int x = kernelSize / 2; x < dibInfo.width - kernelSize / 2; ++x)
@@ -212,6 +251,34 @@ void Bitmap::applyGaussianFilter(int kernelSize)
                 new_pixel_data[newIndex + 2] = std::min(255, std::max(0, static_cast<int>(blueSum)));
             }
         }
+    }
+    else
+    {
+        // Sequential version for small images
+        for (int y = kernelSize / 2; y < dibInfo.height - kernelSize / 2; ++y)
+        {
+            for (int x = kernelSize / 2; x < dibInfo.width - kernelSize / 2; ++x)
+            {
+                float redSum = 0, greenSum = 0, blueSum = 0;
+
+                for (int ki = 0; ki < kernelSize; ++ki)
+                {
+                    for (int kj = 0; kj < kernelSize; ++kj)
+                    {
+                        int pixelIndex = ((y + ki - kernelSize / 2) * dibInfo.width + (x + kj - kernelSize / 2)) * 3;
+                        redSum += pixel_data[pixelIndex] * kernel[ki][kj];
+                        greenSum += pixel_data[pixelIndex + 1] * kernel[ki][kj];
+                        blueSum += pixel_data[pixelIndex + 2] * kernel[ki][kj];
+                    }
+                }
+
+                int newIndex = (y * dibInfo.width + x) * 3;
+                new_pixel_data[newIndex] = std::min(255, std::max(0, static_cast<int>(redSum)));
+                new_pixel_data[newIndex + 1] = std::min(255, std::max(0, static_cast<int>(greenSum)));
+                new_pixel_data[newIndex + 2] = std::min(255, std::max(0, static_cast<int>(blueSum)));
+            }
+        }
+    }
 
     pixel_data.swap(new_pixel_data);
 }
