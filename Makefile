@@ -17,7 +17,7 @@ DEPS=$(wildcard *.h)
 OBJ= Main.o EditorBMP.o
 TEST_OBJ= GoogleTest.o EditorBMP.o
 
-.PHONY: default
+.PHONY: default all clean cleanall test
 
 default: all
 
@@ -33,7 +33,7 @@ $(PROJECT): Main.o $(LIBPROJECT)
 all: $(PROJECT)
 
 test: $(TEST_OBJ)
-	$(CXX) -o $(PROJECT)_test GoogleTest.o EditorBMP.o $(LDXXFLAGS)
+	$(CXX) -o $(PROJECT)_test GoogleTest.o EditorBMP.o $(CCXFLAGS)
 	./$(PROJECT)_test
 
 clean:
