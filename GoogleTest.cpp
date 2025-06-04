@@ -6,6 +6,13 @@
 #include <algorithm>
 #include <fstream>
 
+struct FunctionTimes {
+    double rotate_ccw_time;
+    double rotate_cw_time;
+    double gaussian_filter_time;
+    double total_time;
+};
+
 void createLargeTestImage(const std::string& filename, int width, int height)
 {
     std::cout << "Creating test image " << width << "x" << height << "..." << std::endl;
@@ -90,36 +97,54 @@ void createLargeTestImage(const std::string& filename, int width, int height)
     std::cout << "Test image created successfully" << std::endl;
 }
 
-double runTest(int num_threads, const std::string& input_file)
+FunctionTimes runTest(int num_threads, const std::string& input_file)
 {
     omp_set_num_threads(num_threads);
     std::cout << "\n=== Running with " << num_threads << " threads ===" << std::endl;
     
-    auto start = std::chrono::high_resolution_clock::now();
+    auto total_start = std::chrono::high_resolution_clock::now();
     
     Bitmap bitmap;
     bitmap.open(input_file);
 
+    FunctionTimes times;
+
     {
         Bitmap tempBitmap = bitmap;
+        
+        auto start = std::chrono::high_resolution_clock::now();
         tempBitmap.Rotate(0);
+        auto end = std::chrono::high_resolution_clock::now();
+        times.rotate_ccw_time = std::chrono::duration<double>(end - start).count();
+        
         tempBitmap.save("RotatedCounterClockwise.bmp");
     }
 
     {
+        auto start = std::chrono::high_resolution_clock::now();
         bitmap.Rotate(1);
+        auto end = std::chrono::high_resolution_clock::now();
+        times.rotate_cw_time = std::chrono::duration<double>(end - start).count();
+        
         bitmap.save("RotatedClockwise.bmp");
 
+        start = std::chrono::high_resolution_clock::now();
         bitmap.applyGaussianFilter(5);
+        end = std::chrono::high_resolution_clock::now();
+        times.gaussian_filter_time = std::chrono::duration<double>(end - start).count();
+        
         bitmap.save("Filtered.bmp");
     }
     
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> duration = end - start;
-    double time = duration.count();
+    auto total_end = std::chrono::high_resolution_clock::now();
+    times.total_time = std::chrono::duration<double>(total_end - total_start).count();
     
-    std::cout << "Execution time: " << time << " seconds" << std::endl;
-    return time;
+    std::cout << "Rotate CCW: " << times.rotate_ccw_time << " sec" << std::endl;
+    std::cout << "Rotate CW:  " << times.rotate_cw_time << " sec" << std::endl;
+    std::cout << "Gaussian:   " << times.gaussian_filter_time << " sec" << std::endl;
+    std::cout << "Total:      " << times.total_time << " sec" << std::endl;
+    
+    return times;
 }
 
 int main(int argc, char* argv[])
@@ -140,25 +165,49 @@ int main(int argc, char* argv[])
     int max_threads = omp_get_max_threads();
     std::cout << "Maximum available threads: " << max_threads << std::endl;
     
-    std::vector<std::pair<int, double>> results;
+    std::vector<std::pair<int, FunctionTimes>> results;
     
     results.push_back({1, runTest(1, input_file)});
+    
     if (max_threads >= 2) results.push_back({2, runTest(2, input_file)});
     if (max_threads >= 4) results.push_back({4, runTest(4, input_file)});
     if (max_threads > 4) results.push_back({max_threads, runTest(max_threads, input_file)});
     
-    std::cout << "\n===== Test Results =====" << std::endl;
-    std::cout << "Threads\tTime (sec)\tSpeedup" << std::endl;
+    std::cout << "\n===== Detailed Performance Results =====" << std::endl;
+    std::cout << "Threads\tRotate CCW\tRotate CW\tGaussian\tTotal\t\tSpeedup" << std::endl;
     
-    double base_time = results[0].second;
+    FunctionTimes base_times = results[0].second;
     
     for (const auto& result : results)
     {
         int threads = result.first;
-        double time = result.second;
-        double speedup = base_time / time;
+        FunctionTimes times = result.second;
+        double speedup = base_times.total_time / times.total_time;
         
-        std::cout << threads << "\t" << time << "\t" << speedup << "x" << std::endl;
+        std::cout << threads << "\t" 
+                  << times.rotate_ccw_time << "\t\t"
+                  << times.rotate_cw_time << "\t\t"
+                  << times.gaussian_filter_time << "\t\t"
+                  << times.total_time << "\t\t"
+                  << speedup << "x" << std::endl;
+    }
+    
+    std::cout << "\n===== Function Speedup Analysis =====" << std::endl;
+    std::cout << "Threads\tRotate CCW Speedup\tRotate CW Speedup\tGaussian Speedup" << std::endl;
+    
+    for (const auto& result : results)
+    {
+        int threads = result.first;
+        FunctionTimes times = result.second;
+        
+        double ccw_speedup = base_times.rotate_ccw_time / times.rotate_ccw_time;
+        double cw_speedup = base_times.rotate_cw_time / times.rotate_cw_time;
+        double gaussian_speedup = base_times.gaussian_filter_time / times.gaussian_filter_time;
+        
+        std::cout << threads << "\t" 
+                  << ccw_speedup << "x\t\t\t"
+                  << cw_speedup << "x\t\t\t"
+                  << gaussian_speedup << "x" << std::endl;
     }
     
     return 0;
