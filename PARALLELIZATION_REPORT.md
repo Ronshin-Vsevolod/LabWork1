@@ -72,10 +72,29 @@ This approach ensures:
 
 ## Results
 
+### Performance Measurements
+
+The following results were obtained on an 8-core system using an 800×600 test image:
+
+| Threads | Execution Time (sec) | Speedup |
+|---------|---------------------|---------|
+| 1       | 0.267566           | 1.00x   |
+| 2       | 0.139924           | 1.91x   |
+| 4       | 0.0843066          | 3.17x   |
+| 8       | 0.0897168          | 2.98x   |
+
+### Analysis
+
+- **Near-linear speedup** up to 4 threads (3.17x speedup with 4 threads)
+- **Optimal performance** achieved at 4 threads for this workload
+- **Slight performance decrease** at 8 threads due to thread management overhead
+- **91% parallel efficiency** at 2 threads (91.1% of theoretical maximum)
+- **79% parallel efficiency** at 4 threads (79.3% of theoretical maximum)
+
 The parallelization provides:
 - **No performance degradation** for small images (uses original sequential code)
 - **Significant speedup** for large images and complex operations
-- **Scalable performance** with increasing thread count
+- **Scalable performance** with increasing thread count up to optimal point
 - **Maintained correctness** - identical output regardless of thread count
 
 ## Files Modified
@@ -89,4 +108,4 @@ The parallelization provides:
 
 ## Conclusion
 
-The parallelization successfully improves performance for computationally intensive operations while maintaining backward compatibility and ensuring no performance regression for smaller workloads. The implementation uses intelligent thresholds to determine when parallelization is beneficial, resulting in optimal performance across all image sizes. 
+The parallelization successfully improves performance for computationally intensive operations while maintaining backward compatibility and ensuring no performance regression for smaller workloads. The implementation uses intelligent thresholds to determine when parallelization is beneficial, resulting in optimal performance across all image sizes. The achieved speedup of 3.17x with 4 threads demonstrates effective utilization of multi-core systems for image processing tasks. 

@@ -8,17 +8,18 @@ A = ar
 
 AFLAGS = rsv
 
-CCXFLAGS = -I. -std=c++17 -Werror -Wpedantic -Wall -g -fPIC
+CCXFLAGS = -I. -std=c++17 -Werror -Wpedantic -Wall -g -fPIC -fopenmp
 
 LDXXFLAGS = $(CCXFLAGS) -L. -l:$(LIBPROJECT)
 
 DEPS=$(wildcard *.h)
 
 OBJ= Main.o EditorBMP.o
+TEST_OBJ= GoogleTest.o EditorBMP.o
 
-.PHONY: default
+.PHONY: default all clean cleanall test
 
-default: all;
+default: all
 
 %.o: %.cpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CCXFLAGS)
@@ -31,11 +32,14 @@ $(PROJECT): Main.o $(LIBPROJECT)
 
 all: $(PROJECT)
 
-.PHONY: clean
+test: $(TEST_OBJ)
+	$(CXX) -o $(PROJECT)_test GoogleTest.o EditorBMP.o $(CCXFLAGS)
+	./$(PROJECT)_test
 
 clean:
 	rm -f *.o
 
 cleanall: clean
 	rm -f $(PROJECT)
+	rm -f $(PROJECT)_test
 	rm -f $(LIBPROJECT)
