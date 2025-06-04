@@ -8,7 +8,7 @@ A = ar
 
 AFLAGS = rsv
 
-CCXFLAGS = -I. -std=c++17 -Werror -Wpedantic -Wall -g -fPIC
+CCXFLAGS = -I. -std=c++17 -Werror -Wpedantic -Wall -g -fPIC -fopenmp
 
 LDXXFLAGS = $(CCXFLAGS) -L. -l:$(LIBPROJECT)
 
